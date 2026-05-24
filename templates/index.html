@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Spam Email Classifier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0d0f12; --surface: #14171c; --surface2: #1b1f27;
+  --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.13);
+  --text: #e8eaf0; --muted: #7a8396; --dim: #4a5168;
+  --spam: #f25c5c; --spam-bg: rgba(242,92,92,0.1); --spam-border: rgba(242,92,92,0.25);
+  --ham: #3ecf8e; --ham-bg: rgba(62,207,142,0.1); --ham-border: rgba(62,207,142,0.25);
+  --accent: #4f8ef7; --accent-bg: rgba(79,142,247,0.1);
+  --font-head: 'Syne', sans-serif; --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'DM Mono', monospace; --radius: 12px; --radius-sm: 8px;
+}
+body { font-family: var(--font-body); background: var(--bg); color: var(--text); min-height: 100vh; font-size: 15px; line-height: 1.6; }
+.page-grid { display: grid; grid-template-columns: 300px 1fr; grid-template-rows: auto 1fr; min-height: 100vh; }
+.header { grid-column: 1 / -1; padding: 20px 32px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: var(--surface); position: sticky; top: 0; z-index: 100; }
+.logo { display: flex; align-items: center; gap: 12px; }
+.logo-icon { width: 36px; height: 36px; background: var(--spam-bg); border: 1px solid var(--spam-border); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 17px; }
+.logo-text { font-family: var(--font-head); font-size: 18px; font-weight: 600; letter-spacing: -0.02em; }
+.logo-text span { color: var(--spam); }
+.header-badges { display: flex; gap: 8px; }
+.badge { font-family: var(--font-mono); font-size: 11px; padding: 4px 10px; border-radius: 99px; border: 1px solid var(--border2); color: var(--muted); letter-spacing: 0.04em; }
+.badge.green { border-color: var(--ham-border); color: var(--ham); background: var(--ham-bg); }
+.badge.blue { border-color: rgba(79,142,247,0.3); color: var(--accent); background: var(--accent-bg); }
+.sidebar { border-right: 1px solid var(--border); padding: 24px 20px; background: var(--surface); overflow-y: auto; }
+.section-title { font-family: var(--font-mono); font-size: 10px; font-weight: 500; letter-spacing: 0.12em; color: var(--dim); text-transform: uppercase; margin-bottom: 12px; }
+.metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 24px; }
+.metric-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; }
+.metric-value { font-family: var(--font-head); font-size: 22px; font-weight: 700; color: var(--text); line-height: 1; }
+.metric-value.accent { color: var(--ham); }
+.metric-label { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.cm-wrap { margin-bottom: 24px; }
+.cm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
+.cm-cell { border-radius: var(--radius-sm); padding: 10px; text-align: center; }
+.cm-val { font-family: var(--font-head); font-size: 20px; font-weight: 700; }
+.cm-desc { font-size: 10px; margin-top: 3px; opacity: 0.75; }
+.cm-tp { background: rgba(62,207,142,0.12); color: var(--ham); }
+.cm-tn { background: rgba(79,142,247,0.12); color: var(--accent); }
+.cm-fp { background: rgba(255,180,0,0.1); color: #ffb400; }
+.cm-fn { background: rgba(242,92,92,0.1); color: var(--spam); }
+.info-list { display: flex; flex-direction: column; gap: 6px; }
+.info-row { display: flex; justify-content: space-between; font-size: 13px; }
+.info-key { color: var(--muted); } .info-val { font-family: var(--font-mono); color: var(--text); }
+.sample-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
+.sample-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 9px 12px; font-family: var(--font-body); font-size: 12px; color: var(--muted); cursor: pointer; text-align: left; transition: all 0.15s; display: flex; align-items: center; gap: 8px; width: 100%; }
+.sample-btn:hover { border-color: var(--border2); color: var(--text); }
+.sample-btn .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.sample-btn .dot.spam { background: var(--spam); } .sample-btn .dot.ham { background: var(--ham); }
+.sidebar-divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+.main { padding: 28px 32px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; }
+.input-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+.input-label { font-size: 13px; font-weight: 500; color: var(--muted); margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+.char-count { font-family: var(--font-mono); font-size: 11px; color: var(--dim); }
+textarea { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-family: var(--font-body); font-size: 14px; line-height: 1.7; padding: 14px 16px; resize: vertical; min-height: 140px; transition: border-color 0.15s; outline: none; }
+textarea::placeholder { color: var(--dim); } textarea:focus { border-color: var(--border2); }
+.btn-row { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; gap: 10px; }
+.btn-classify { background: var(--spam); border: none; border-radius: var(--radius-sm); color: #fff; font-family: var(--font-head); font-size: 14px; font-weight: 600; padding: 11px 28px; cursor: pointer; letter-spacing: 0.01em; transition: opacity 0.15s, transform 0.1s; display: flex; align-items: center; gap: 8px; }
+.btn-classify:hover:not(:disabled) { opacity: 0.85; } .btn-classify:active:not(:disabled) { transform: scale(0.98); } .btn-classify:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-clear { background: transparent; border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--muted); font-family: var(--font-body); font-size: 13px; padding: 10px 18px; cursor: pointer; transition: all 0.15s; }
+.btn-clear:hover { color: var(--text); border-color: var(--border2); }
+.spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; display: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.result-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; display: none; animation: fadeUp 0.3s ease; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.result-header { padding: 18px 20px; display: flex; align-items: center; gap: 16px; border-bottom: 1px solid var(--border); }
+.verdict-icon { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+.verdict-icon.spam-icon { background: var(--spam-bg); border: 1px solid var(--spam-border); }
+.verdict-icon.ham-icon { background: var(--ham-bg); border: 1px solid var(--ham-border); }
+.verdict-label { font-family: var(--font-head); font-size: 24px; font-weight: 700; line-height: 1; }
+.verdict-label.spam { color: var(--spam); } .verdict-label.ham { color: var(--ham); }
+.verdict-sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.verdict-pill { margin-left: auto; font-family: var(--font-mono); font-size: 12px; font-weight: 500; padding: 6px 16px; border-radius: 99px; }
+.verdict-pill.spam { background: var(--spam-bg); border: 1px solid var(--spam-border); color: var(--spam); }
+.verdict-pill.ham { background: var(--ham-bg); border: 1px solid var(--ham-border); color: var(--ham); }
+.prob-section { padding: 16px 20px; border-bottom: 1px solid var(--border); }
+.prob-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: 6px; font-family: var(--font-mono); }
+.prob-track { height: 8px; background: var(--ham-bg); border-radius: 99px; overflow: hidden; border: 1px solid var(--ham-border); }
+.prob-fill { height: 100%; background: var(--spam); border-radius: 99px; transition: width 0.7s cubic-bezier(0.4,0,0.2,1); width: 0%; }
+.prob-values { display: flex; justify-content: space-between; font-size: 13px; margin-top: 6px; }
+.prob-ham { color: var(--ham); font-family: var(--font-mono); font-weight: 500; }
+.prob-spam { color: var(--spam); font-family: var(--font-mono); font-weight: 500; }
+.features-section { padding: 16px 20px; border-bottom: 1px solid var(--border); }
+.features-list { margin-top: 12px; display: flex; flex-direction: column; gap: 7px; }
+.feat-row { display: flex; align-items: center; gap: 10px; }
+.feat-word { font-family: var(--font-mono); font-size: 12px; color: var(--muted); min-width: 110px; }
+.feat-track { flex: 1; height: 4px; background: var(--surface2); border-radius: 99px; overflow: hidden; }
+.feat-fill { height: 100%; border-radius: 99px; }
+.feat-score { font-family: var(--font-mono); font-size: 11px; color: var(--dim); min-width: 44px; text-align: right; }
+.meta-row { padding: 12px 20px; display: flex; gap: 20px; background: var(--surface2); }
+.meta-item { font-size: 12px; color: var(--muted); }
+.meta-item span { color: var(--text); font-family: var(--font-mono); }
+.empty-state { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 48px 32px; text-align: center; color: var(--dim); }
+.empty-icon { font-size: 40px; margin-bottom: 12px; }
+.empty-text { font-size: 14px; line-height: 1.6; }
+::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+@media (max-width: 768px) { .page-grid { grid-template-columns: 1fr; } .sidebar { border-right: none; border-bottom: 1px solid var(--border); } .header { padding: 14px 16px; } .main { padding: 16px; } }
+</style>
+</head>
+<body>
+<div class="page-grid">
+  <header class="header">
+    <div class="logo">
+      <div class="logo-icon">🛡️</div>
+      <div class="logo-text">Spam<span>Guard</span></div>
+    </div>
+    <div class="header-badges">
+      <span class="badge blue">TF-IDF · Naive Bayes</span>
+      <span class="badge green">Accuracy {{ metrics.accuracy }}%</span>
+    </div>
+  </header>
+  <aside class="sidebar">
+    <div class="section-title">Model metrics</div>
+    <div class="metric-grid">
+      <div class="metric-card"><div class="metric-value accent">{{ metrics.accuracy }}%</div><div class="metric-label">Accuracy</div></div>
+      <div class="metric-card"><div class="metric-value">{{ metrics.precision }}%</div><div class="metric-label">Precision</div></div>
+      <div class="metric-card"><div class="metric-value">{{ metrics.recall }}%</div><div class="metric-label">Recall</div></div>
+      <div class="metric-card"><div class="metric-value">{{ metrics.f1 }}%</div><div class="metric-label">F1 Score</div></div>
+    </div>
+    <hr class="sidebar-divider"/>
+    <div class="cm-wrap">
+      <div class="section-title">Confusion matrix</div>
+      <div class="cm-grid">
+        <div class="cm-cell cm-tp"><div class="cm-val">{{ metrics.confusion_matrix[1][1] }}</div><div class="cm-desc">True positive<br>Spam → Spam ✓</div></div>
+        <div class="cm-cell cm-fp"><div class="cm-val">{{ metrics.confusion_matrix[0][1] }}</div><div class="cm-desc">False positive<br>Ham → Spam ✗</div></div>
+        <div class="cm-cell cm-fn"><div class="cm-val">{{ metrics.confusion_matrix[1][0] }}</div><div class="cm-desc">False negative<br>Spam → Ham ✗</div></div>
+        <div class="cm-cell cm-tn"><div class="cm-val">{{ metrics.confusion_matrix[0][0] }}</div><div class="cm-desc">True negative<br>Ham → Ham ✓</div></div>
+      </div>
+    </div>
+    <hr class="sidebar-divider"/>
+    <div class="section-title" style="margin-bottom:10px;">Dataset info</div>
+    <div class="info-list" style="margin-bottom:24px;">
+      <div class="info-row"><span class="info-key">Algorithm</span><span class="info-val">Multinomial NB</span></div>
+      <div class="info-row"><span class="info-key">Vectorizer</span><span class="info-val">TF-IDF (1,2-gram)</span></div>
+      <div class="info-row"><span class="info-key">Training samples</span><span class="info-val">{{ metrics.train_size }}</span></div>
+      <div class="info-row"><span class="info-key">Test samples</span><span class="info-val">{{ metrics.test_size }}</span></div>
+      <div class="info-row"><span class="info-key">Max features</span><span class="info-val">5,000</span></div>
+    </div>
+    <hr class="sidebar-divider"/>
+    <div class="section-title" style="margin-bottom:10px;">Try samples</div>
+    <div class="sample-list">
+      <button class="sample-btn" onclick="loadSample('spam1')"><span class="dot spam"></span> 💊 Free pills offer</button>
+      <button class="sample-btn" onclick="loadSample('spam2')"><span class="dot spam"></span> 🏆 You've won a prize</button>
+      <button class="sample-btn" onclick="loadSample('spam3')"><span class="dot spam"></span> 💰 Nigerian prince</button>
+      <button class="sample-btn" onclick="loadSample('ham1')"><span class="dot ham"></span> 📅 Team meeting invite</button>
+      <button class="sample-btn" onclick="loadSample('ham2')"><span class="dot ham"></span> 📦 Order shipped update</button>
+      <button class="sample-btn" onclick="loadSample('ham3')"><span class="dot ham"></span> 👋 Catching up with friend</button>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="input-card">
+      <div class="input-label">Email content <span class="char-count" id="charCount">0 characters · 0 words</span></div>
+      <textarea id="emailInput" placeholder="Paste or type an email message here to classify it as spam or legitimate…" oninput="updateCount()"></textarea>
+      <div class="btn-row">
+        <button class="btn-clear" onclick="clearInput()">Clear</button>
+        <button class="btn-classify" id="classifyBtn" onclick="classify()">
+          <div class="spinner" id="spinner"></div>
+          <span id="btnText">🔍 Classify Email</span>
+        </button>
+      </div>
+    </div>
+    <div id="emptyState" class="empty-state">
+      <div class="empty-icon">📨</div>
+      <div class="empty-text">Enter an email above to see the classification result,<br/>probability scores, and top TF-IDF features.</div>
+    </div>
+    <div id="resultCard" class="result-card">
+      <div class="result-header">
+        <div class="verdict-icon" id="verdictIcon"></div>
+        <div><div class="verdict-label" id="verdictLabel"></div><div class="verdict-sub" id="verdictSub"></div></div>
+        <div class="verdict-pill" id="verdictPill"></div>
+      </div>
+      <div class="prob-section">
+        <div class="prob-labels"><span>← Ham (legitimate)</span><span>Spam →</span></div>
+        <div class="prob-track"><div class="prob-fill" id="probFill"></div></div>
+        <div class="prob-values"><span class="prob-ham" id="hamProb"></span><span class="prob-spam" id="spamProb"></span></div>
+      </div>
+      <div class="features-section">
+        <div class="section-title">Top TF-IDF features detected</div>
+        <div class="features-list" id="featureList"></div>
+      </div>
+      <div class="meta-row">
+        <div class="meta-item">Words: <span id="metaWords">—</span></div>
+        <div class="meta-item">Characters: <span id="metaChars">—</span></div>
+        <div class="meta-item">Confidence: <span id="metaConf">—</span></div>
+      </div>
+    </div>
+  </main>
+</div>
+<script>
+const SAMPLES = {
+  spam1: "Congratulations! You've been selected for a FREE trial of our amazing weight loss pills! Lose 30lbs in 30 days GUARANTEED! Click here NOW to claim your FREE bottle! Limited time offer! Act now before it's too late!",
+  spam2: "You have WON our monthly prize draw! Your email was randomly selected from millions of entries. You are the LUCKY WINNER of $1,000,000! To claim your prize, reply with your full name and bank account number immediately!",
+  spam3: "Dear Friend, I am Prince Abubakar from Nigeria. I have $47 million USD that I need to transfer urgently. I need your bank account details to complete this transfer. You will receive 30% commission. Please reply with utmost confidentiality.",
+  ham1: "Hi Sarah, just confirming our team meeting tomorrow at 2 PM in Conference Room B. We'll be going over the Q3 roadmap and sprint planning. Please bring any blockers you want to discuss. Looking forward to seeing everyone!",
+  ham2: "Your order #89234 has been shipped and will arrive by Thursday. You can track your package using the link in your account. If you have any questions, please contact our support team. Thanks for shopping with us!",
+  ham3: "Hey! It's been a while since we caught up. Are you free this weekend for coffee? I'll be in your neighborhood on Saturday afternoon. Let me know if that works, otherwise we can figure out another time. Hope you're doing well!"
+};
+function loadSample(key) { document.getElementById('emailInput').value = SAMPLES[key]; updateCount(); }
+function updateCount() {
+  const text = document.getElementById('emailInput').value;
+  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+  document.getElementById('charCount').textContent = `${text.length} characters · ${words} words`;
+}
+function clearInput() {
+  document.getElementById('emailInput').value = '';
+  updateCount();
+  document.getElementById('resultCard').style.display = 'none';
+  document.getElementById('emptyState').style.display = 'block';
+}
+async function classify() {
+  const text = document.getElementById('emailInput').value.trim();
+  if (!text) return;
+  const btn = document.getElementById('classifyBtn');
+  const spinner = document.getElementById('spinner');
+  const btnText = document.getElementById('btnText');
+  btn.disabled = true; spinner.style.display = 'block'; btnText.textContent = 'Analyzing…';
+  try {
+    const res = await fetch('/classify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) });
+    const data = await res.json();
+    renderResult(data);
+  } catch (e) { alert('Error: Could not reach the server.'); }
+  finally { btn.disabled = false; spinner.style.display = 'none'; btnText.textContent = '🔍 Classify Email'; }
+}
+function renderResult(data) {
+  const isSpam = data.is_spam;
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('resultCard').style.display = 'block';
+  document.getElementById('verdictIcon').innerHTML = isSpam ? '⚠️' : '✅';
+  document.getElementById('verdictIcon').className = `verdict-icon ${isSpam ? 'spam-icon' : 'ham-icon'}`;
+  document.getElementById('verdictLabel').textContent = isSpam ? 'Spam Detected' : 'Legitimate Email';
+  document.getElementById('verdictLabel').className = `verdict-label ${isSpam ? 'spam' : 'ham'}`;
+  document.getElementById('verdictSub').textContent = isSpam ? `${data.spam_prob}% probability this is spam` : `${data.ham_prob}% probability this is legitimate`;
+  document.getElementById('verdictPill').textContent = data.label;
+  document.getElementById('verdictPill').className = `verdict-pill ${isSpam ? 'spam' : 'ham'}`;
+  setTimeout(() => { document.getElementById('probFill').style.width = data.spam_prob + '%'; }, 50);
+  document.getElementById('hamProb').textContent = `Ham: ${data.ham_prob}%`;
+  document.getElementById('spamProb').textContent = `Spam: ${data.spam_prob}%`;
+  const maxScore = data.top_features[0]?.score || 1;
+  const color = isSpam ? '#f25c5c' : '#3ecf8e';
+  document.getElementById('featureList').innerHTML = data.top_features.map(f => `
+    <div class="feat-row">
+      <span class="feat-word">${f.word}</span>
+      <div class="feat-track"><div class="feat-fill" style="width:${Math.round(f.score/maxScore*100)}%;background:${color}"></div></div>
+      <span class="feat-score">${f.score}</span>
+    </div>`).join('') || '<span style="color:var(--dim);font-size:13px;">No significant features found.</span>';
+  document.getElementById('metaWords').textContent = data.word_count;
+  document.getElementById('metaChars').textContent = data.char_count;
+  document.getElementById('metaConf').textContent = isSpam ? `${data.spam_prob}% spam` : `${data.ham_prob}% ham`;
+}
+</script>
+</body>
+</html>
