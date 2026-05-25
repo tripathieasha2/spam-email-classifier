@@ -1,8 +1,8 @@
-# 🛡️ SpamGuard — Spam Email Classifier
+ SpamGuard — Spam Email Classifier
 
 A machine learning web app that classifies emails as **spam or legitimate (ham)** using a Naive Bayes classifier trained on TF-IDF features.
 
-## ✨ Features
+ Features
 
 - **Real ML pipeline** — scikit-learn TF-IDF vectorizer + Multinomial Naive Bayes
 - **Probability scores** — shows confidence for both spam and ham classes
@@ -12,9 +12,9 @@ A machine learning web app that classifies emails as **spam or legitimate (ham)*
 - **Sample emails** — built-in spam and ham examples to try instantly
 - **Dark-themed UI** — clean, professional interface
 
-## 🚀 Getting Started
+ Getting Started
 
-### 1. Clone / Download the project
+ 1. Clone / Download the project
 
 ```bash
 cd spam_classifier
